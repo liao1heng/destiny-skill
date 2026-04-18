@@ -1,0 +1,7 @@
+interface:
+  display_name: "CLI Dev"
+  short_description: "Run detached Codex CLI coding workers"
+  default_prompt: "Use $cli-dev to launch a parallel Codex CLI implementation worker."
+
+policy:
+  allow_implicit_invocation: false

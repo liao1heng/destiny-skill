@@ -1,16 +1,39 @@
 # destiny-skill
 
-Public sync repo for custom Codex skills.
+Mirror of the local Codex `skills/` directory.
 
-## Included skills
-- `cli-arc`
-- `cli-dev`
-- `cli-pm`
-- `cli-test`
+## Layout
+
+The repository keeps the same structure as the local skills directory:
+
+```text
+skills/
+  .system/
+  cli-arc/
+  cli-des/
+  cli-dev/
+  cli-pm/
+  cli-test/
+  figma/
+```
+
+Each skill directory may include:
+
+- `SKILL.md`
+- `agents/`
+- `references/`
+- `scripts/`
+- `templates/`
+- `assets/`
 
 ## Scope
-This repository stores the skill definitions as Markdown for cross-machine sync.
-It does not include the platform-specific helper scripts or other runtime files.
+
+This repository stores the actual skill content used by the local Codex setup,
+including helper scripts, references, templates, and assets.
+
+Transient cache files such as `__pycache__` and `*.pyc` are intentionally excluded.
 
 ## Sync
-Clone this repository on any machine and copy the files you want into your local Codex skills area.
+
+To sync onto another machine, clone this repository and copy `skills/` into the
+target Codex home directory.

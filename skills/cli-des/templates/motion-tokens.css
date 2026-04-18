@@ -1,0 +1,25 @@
+/* Motion defaults. Tune per project, but keep names stable. */
+
+:root {
+  --motion-duration-micro: 180ms;
+  --motion-duration-standard: 280ms;
+  --motion-duration-section: 400ms;
+  --motion-delay-stagger: 50ms;
+
+  --motion-ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-micro: 1ms;
+    --motion-duration-standard: 1ms;
+    --motion-duration-section: 1ms;
+    --motion-delay-stagger: 0ms;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}

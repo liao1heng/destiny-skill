@@ -1,0 +1,4 @@
+interface:
+  display_name: "CLI ARC"
+  short_description: "Architect and coordinate guide-driven worker flows"
+  default_prompt: "Use $cli-arc to analyze the project, write guide files, split tasks, and coordinate $cli-dev and $cli-test."

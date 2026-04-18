@@ -1,0 +1,7 @@
+interface:
+  display_name: "CLI Test"
+  short_description: "Run detached Kimi CLI test workers"
+  default_prompt: "Use $cli-test to launch a parallel Kimi CLI verification worker."
+
+policy:
+  allow_implicit_invocation: false

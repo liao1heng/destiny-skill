@@ -1,0 +1,4 @@
+interface:
+  display_name: "CLI PM"
+  short_description: "Generate `doc/` product docs with closure, modules, and page elements"
+  default_prompt: "Use $cli-pm to write concise Chinese product docs into `doc/`, first maintaining `doc/readme.txt`, then splitting by product/module, and for each function focusing on page elements, main logic closure, overlooked closure, and necessary补全逻辑. Skip visual fluff and obvious explanations."

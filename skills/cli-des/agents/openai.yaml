@@ -1,0 +1,7 @@
+interface:
+  display_name: "CLI DES"
+  short_description: "Materialize reusable web design systems"
+  default_prompt: "Use $cli-des to audit this project and materialize a reusable design system snapshot before changing pages."
+
+policy:
+  allow_implicit_invocation: true
