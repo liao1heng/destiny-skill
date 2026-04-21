@@ -39,12 +39,29 @@ Transient cache files such as `__pycache__` and `*.pyc` are intentionally exclud
 
 This repository is paired with the local `cli-sync` skill.
 
-- Pull flow: `git pull` in `D:\workspace\sefe_dev\destiny-skill`, then mirror the
-  managed skill folders into `C:\Users\the5010_566029155562\.codex\skills`.
-- Push flow: mirror the managed local skill folders back into this repository,
-  commit, and `git push`.
-- Local GitHub auth is stored outside the repository in
-  `C:\Users\the5010_566029155562\.codex\cli-sync\auth.ps1`.
+- Local skill path is resolved dynamically from `${CODEX_HOME}/skills`, or
+  `~/.codex/skills` when `CODEX_HOME` is not set.
+- Repository path is resolved dynamically:
+- if the script is running inside a `destiny-skill` checkout, it uses that checkout
+- if the current working directory is inside a matching checkout, it uses that checkout
+- otherwise it uses `${CODEX_HOME}/repos/destiny-skill` and clones there automatically
+- GitHub auth is auto-discovered from the current machine:
+- existing git credentials
+- `gh auth token`
+- environment tokens such as `GITHUB_MCP_PAT`, `GH_TOKEN`, or `GITHUB_TOKEN`
+- SSH if the checkout already uses an SSH origin
 
-To sync onto another machine, clone this repository, install the `cli-sync`
-skill, and provide a local auth file at the same path.
+Examples:
+
+```powershell
+pwsh -File skills/cli-sync/scripts/entry.ps1 -Mode pull
+pwsh -File skills/cli-sync/scripts/entry.ps1 -Mode push -Message "Sync local Codex skills"
+```
+
+```bash
+bash skills/cli-sync/scripts/entry.sh --mode pull
+bash skills/cli-sync/scripts/entry.sh --mode push --message "Sync local Codex skills"
+```
+
+To sync onto another machine, clone this repository and run `cli-sync` directly.
+It will discover paths automatically and create a managed checkout when needed.
