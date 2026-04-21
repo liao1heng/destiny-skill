@@ -1,0 +1,7 @@
+interface:
+  display_name: "CLI SYNC"
+  short_description: "Sync the local Codex skills mirror with GitHub"
+  default_prompt: "Use $cli-sync to pull or push the managed local Codex skills against the fixed destiny-skill GitHub repository."
+
+policy:
+  allow_implicit_invocation: true

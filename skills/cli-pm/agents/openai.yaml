@@ -1,4 +1,4 @@
 interface:
   display_name: "CLI PM"
-  short_description: "Generate `doc/` product docs with closure, modules, and page elements"
-  default_prompt: "Use $cli-pm to write concise Chinese product docs into `doc/`, first maintaining `doc/readme.txt`, then splitting by product/module, and for each function focusing on page elements, main logic closure, overlooked closure, and necessary补全逻辑. Skip visual fluff and obvious explanations."
+  short_description: "Write markdown wireframe prototypes before any PM explanation docs"
+  default_prompt: "Use $cli-pm to write or update Chinese PM docs only, and for page requests start with a `.md` wireframe prototype that shows the final page structure without explanation-heavy notes or source-code changes."

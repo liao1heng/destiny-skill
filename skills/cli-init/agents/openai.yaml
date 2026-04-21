@@ -1,0 +1,7 @@
+interface:
+  display_name: "CLI Init"
+  short_description: "初始化项目规则、说明文件与 push-hook 部署流程"
+  default_prompt: "Use $cli-init to initialize AGENTS, root docs, and the push-to-server post-receive deployment flow for this project."
+
+policy:
+  allow_implicit_invocation: true
