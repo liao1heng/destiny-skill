@@ -1,105 +1,69 @@
-# Adapter Rules
+# 适配规则
 
-Use this file during `Pick adapter` and `Pick library only if needed`.
+## 样式适配
 
-## Framework rule
+- 先用项目已有方案。
+- 项目用 CSS，就写 CSS 变量。
+- 项目用 Tailwind CSS，就把 Tailwind 映射到 CSS 变量。
+- 项目用组件库，就建立主题变量或组件适配层。
+- 不为视觉改造强行引入 Tailwind、组件库或动画库。
 
-- Stay framework-agnostic by default
-- Do not assume React, Vue, Nuxt, Next, or a component library
-- Only adapt the style layer unless project context explicitly requires framework code
+## 规范文件位置
 
-## Choose adapter
+- 单应用项目：放在仓库根目录或现有规范目录。
+- 多应用项目：放在实际被改应用的根目录；跨应用共用时放共享包或仓库根目录。
+- 已有规范文件优先更新，不另起一套。
+- 新建目录后，同步更新该目录说明文件。
 
-### `CSS`
+## SVG 图标
 
-Pick `CSS` when:
+目录选择：
 
-- the project has plain CSS, CSS modules, Sass, or bespoke styling
-- the project has no utility framework
-- you need the most portable output
+1. 复用已有图标目录。
+2. 没有图标目录时，在当前应用资源目录下创建 `icons`。
+3. 只有需要公网 URL 直接访问时，才放公开静态目录。
+4. 跨应用共用图标放共享资源目录。
 
-### `Tailwind CSS`
+调用规则：
 
-Pick `Tailwind CSS` when:
+- 所有矢量图标用 `.svg` 文件。
+- 文件名用小写短横线。
+- 普通 UI 图标用 `currentColor`。
+- 多色品牌图标可保留固定颜色。
+- 复用图标通过 Icon 组件、构建导入或资源 helper 调用。
+- 不在多个页面复制同一段 SVG path。
+- 装饰图标对读屏器隐藏；含义图标提供可访问名称。
 
-- the project already uses Tailwind CSS
-- the user explicitly wants Tailwind CSS
-- the team prefers utility-first styling
+## 按钮
 
-Rules:
+组件选择：
 
-- Never introduce Tailwind CSS into a non-Tailwind project just for aesthetics
-- `design-tokens.css` remains the canonical token source even when Tailwind CSS is present
-- `tailwind.design.preset.js` should map to CSS variables, not replace them
+1. 复用已有按钮组件。
+2. 使用组件库时，封装项目按钮适配层。
+3. 没有按钮组件时，在现有公共组件目录创建。
 
-## Snapshot materialization
+按钮组件必须支持：
 
-Stable project files:
+- 样式类型：主按钮、次按钮、弱按钮、危险按钮。
+- 尺寸：小、中、大。
+- 状态：默认、hover、focus、disabled、loading。
+- 原生 `type`。
+- 图标前缀和后缀。
+- 链接或路由跳转。
+- 全宽。
+- 测试标识。
 
-- `design-theme.json`
-- `DESIGN_GUIDE.md`
-- `design-tokens.css`
-- `motion-tokens.css`
-- `tailwind.design.preset.js` when Tailwind CSS is in use
+页面限制：
 
-Apply order:
+- 页面不得单独维护按钮视觉 class。
+- 可点击 div 不能当按钮使用，除非它在按钮组件内部。
+- 按钮视觉必须来自设计变量。
 
-1. Read existing snapshot files if present
-2. Update snapshot files first
-3. Apply page changes second
+## 动画库
 
-## Library selection
+- CSS：hover、focus、简单过渡、局部 reveal。
+- Motion：布局过渡、列表过渡、手势、滚动触发。
+- GSAP：复杂时间线和强叙事动画。
+- Lenis：仅在明确需要平滑滚动且项目能承受兼容成本时使用。
 
-### `CSS`
-
-Use for:
-
-- hover and focus states
-- simple enter or exit fades
-- local reveals
-- lightweight state transitions
-
-### `Motion`
-
-Default JS animation library.
-
-Use for:
-
-- layout transitions
-- staggered reveals
-- gesture-driven interactions
-- section reveals
-- scroll-triggered transitions
-
-Why:
-
-- works across JavaScript, React, and Vue
-- covers most modern product and marketing needs
-
-### `GSAP`
-
-Escalate only when needed.
-
-Use for:
-
-- multi-step timelines
-- complex hero choreography
-- dense scroll-driven narratives
-- advanced Flip or ScrollTrigger work
-
-### `Lenis`
-
-Do not enable by default.
-
-Use only when all are true:
-
-- the surface is brand-led or narrative-heavy
-- the user explicitly wants smooth or immersive scrolling
-- the page benefits from parallax, scroll sync, or cinematic pacing
-- the project can absorb nested-scroll, Safari, and mobile tradeoffs
-
-## Dependency rule
-
-- Reuse an existing suitable animation library before adding another
-- Do not add parallel animation stacks without a clear split in responsibility
-- If the project only needs local transitions, stay with `CSS`
+添加依赖前必须说明为什么现有方案不够。

@@ -1,155 +1,78 @@
-# Style Framework
+# 风格规则
 
-Use this file during `Audit project` and `Choose style direction`.
+## 审计
 
-## Audit checklist
+记录这些事实：
 
-Inspect and record:
+- 样式入口和主题文件。
+- 现有设计规范。
+- 字体加载位置和 fallback。
+- 主要颜色、字号、间距、圆角、阴影。
+- 公共组件、按钮、卡片、表单、图标。
+- 页面密度：低、中、高。
+- 产品气质：品牌、工具、内容、数据、后台。
 
-- style entrypoints and theme files
-- token files or hard-coded color clusters
-- font loading and type pairings
-- radius, border, shadow, blur, and spacing patterns
-- component primitives and icon systems
-- existing animation libraries and motion idioms
-- page language, audience, trust level, and information density
+## 字体
 
-Answer these before resolving style:
+必须定义：
 
-- Is the current system explicit or implicit?
-- Is the product brand-led, utility-led, or content-led?
-- Is the interface sparse, balanced, or dense?
-- Does the project need trust, excitement, precision, or editorial voice first?
+- `heading`：页面标题、模块标题。
+- `body`：正文和说明。
+- `label`：表单标签、状态标签、辅助信息。
+- `code`：代码、命令、数字指标。
 
-## Choose one style direction
+规则：
 
-Pick exactly one primary direction.
+- 每个字体都要有 fallback。
+- 中文项目必须有中文 fallback。
+- 不在页面里临时写 `font-family`。
+- 外部字体必须说明加载位置和失败降级。
 
-### `future-brand`
+## 颜色
 
-- High-trust, forward-looking, polished, precise
-- Layered depth, controlled accents, luminous but restrained surfaces
-- Good for AI brands, launch pages, premium product marketing
+必须定义直白变量：
 
-### `signal-minimal`
+- `pageBg`：页面背景。
+- `panelBg`：卡片、弹窗、表格等容器背景。
+- `text`：主文本。
+- `mutedText`：弱文本。
+- `brand`：主品牌色。
+- `border`：普通边框。
+- `focus`：键盘焦点。
+- `success`、`warning`、`danger`、`info`：状态色。
 
-- Quiet, sparse, premium, highly legible
-- Typography and spacing do most of the work
-- Good for settings, pricing, product detail, mature brands
+规则：
 
-### `editorial-tech`
+- 页面不直接写十六进制颜色；新增颜色先进入设计变量。
+- 主品牌色只保留一个。
+- 状态色必须可读，不能只靠颜色表达含义。
+- 文本和按钮要满足基本对比度。
 
-- Narrative, contrast-heavy, asymmetrical, idea-first
-- Strong section rhythm, larger headlines, deliberate art direction
-- Good for docs landing pages, narratives, product storytelling
+## 间距
 
-### `industrial-data`
+必须定义：
 
-- Utilitarian, modular, crisp, evidence-heavy
-- Hard edges, mono accents, denser signals, lower decoration
-- Good for dashboards, admin surfaces, ops products
+- `base`：基础单位，常用 `4px` 或 `8px`。
+- `pageX`：页面左右边距。
+- `sectionY`：区块上下间距。
+- `panelPadding`：卡片、弹窗、表格容器内距。
+- `fieldGap`：表单项间距。
+- `controlHeight`：按钮、输入框、选择器高度。
 
-## Resolve token roles
+规则：
 
-Write resolved roles to `design-theme.json` and `design-tokens.css`.
+- 间距用变量或框架映射，不写随机数字。
+- 同类容器使用同一内距。
+- 控件尺寸稳定，hover、loading、长文案不能撑乱布局。
+- 移动端要明确边距和区块间距如何收敛。
 
-Stable role names:
+## 风格方向
 
-- `bg.canvas`
-- `bg.elevated`
-- `surface.primary`
-- `surface.secondary`
-- `text.default`
-- `text.muted`
-- `text.inverse`
-- `accent.primary`
-- `accent.secondary`
-- `border.soft`
-- `border.strong`
-- `shadow.soft`
-- `shadow.focus`
+选择一个主方向：
 
-Rules:
+- `brand`：品牌感强，适合官网、发布页、营销页。
+- `product`：清晰可信，适合产品页、价格页、功能页。
+- `docs`：信息优先，适合文档、帮助中心、开发者页面。
+- `data`：密度高，适合后台、仪表盘、表格和监控。
 
-- Keep role names stable across projects
-- Choose values from project context, not from fixed brand defaults
-- Prefer semantic meaning over "pretty color matching"
-- Keep one primary accent and at most one supporting accent
-
-## Type hierarchy
-
-Resolve these roles for every project:
-
-- `display`: hero or keynote statements
-- `title`: page and section titles
-- `section`: module headers and card titles
-- `body`: default reading text
-- `meta`: labels, helpers, captions
-- `mono`: code, metrics, dense utility text
-
-Rules:
-
-- `display` and `body` should not fight each other
-- `meta` must stay readable at small sizes
-- `mono` is a support voice, not the whole system
-
-## Surface language
-
-Choose one primary surface language and at most one secondary.
-
-Available languages:
-
-- `clean`
-- `frosted`
-- `hard-edge`
-- `gloss`
-- `industrial`
-- `paper`
-
-Rules:
-
-- Primary language defines most surfaces
-- Secondary language is for emphasis only
-- Do not mix more than two surface languages
-- Do not let special surfaces dominate all modules
-
-## Spacing rhythm
-
-Pick one rhythm:
-
-- `compact`
-- `neutral`
-- `airy`
-
-Rules:
-
-- Keep it consistent across cards, sections, and layout gutters
-- Dense UI can still have strong hierarchy; do not fix density with random spacing
-
-## Page cadence
-
-Resolve the order and intensity of these blocks:
-
-- `hero`
-- `proof`
-- `features`
-- `detail`
-- `cta`
-
-Rules:
-
-- `hero` states the promise
-- `proof` earns trust early
-- `features` explain capability
-- `detail` handles depth and objections
-- `cta` closes with one clear next move
-
-## Anti-patterns
-
-- default purple/blue gradient answers
-- global glassmorphism
-- glow as the only depth cue
-- random section-by-section style changes
-- more than one primary accent
-- decorative typography that reduces readability
-- swapping direction mid-page without a strong reason
+不得混用多个主方向。次要影响只能用于少量模块。

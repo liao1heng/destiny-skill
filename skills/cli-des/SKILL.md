@@ -1,110 +1,114 @@
 ---
 name: cli-des
-description: Create and apply reusable web design systems across projects. Use when the user wants pages or products to feel more polished, more consistent, more premium, more "tech", or governed by explicit style and motion rules. Audit existing tokens and animation patterns, materialize project snapshots into fixed files, and adapt output to CSS or Tailwind CSS without binding to a frontend framework.
-metadata:
-  short-description: Reusable web design workflow
+description: 通用 UI 设计系统工作流。用于统一或重构字体、颜色、间距、布局、图标、按钮、动效和设计变量；审计现有样式与组件，输出全局 CSS、Tailwind 映射、基础组件规则，并按需改页面。
 ---
 
 # CLI DES
 
-Turn one-off "make it look better" requests into a reusable project design system.
+## 原则
 
-## Core rules
+- 不写死项目名、路径、页面名、框架名。
+- 先读当前仓库说明、目录说明、样式入口、公共组件和现有设计规范。
+- 先制定规则，再改页面。
+- 优先继承现有设计系统；没有时建立最小规则。
+- 优先写全局 CSS；项目已使用 Tailwind 时，再做 Tailwind 映射。
+- 优先用 flex 布局；只有二维网格、表格或复杂对齐明确需要时使用 grid/table。
+- 只新增必要文件、目录、依赖和组件。
+- 设计变量指可复用的 CSS 变量或主题字段，不使用难懂的抽象命名。
 
-- Be framework-agnostic. Never assume React, Vue, Nuxt, Next, or a component library.
-- Only adapt the style layer. Supported adapters: `CSS` and `Tailwind CSS`.
-- Systematize first, page edits second.
-- Reuse an existing design system if present. Extend it; do not replace it blindly.
-- Keep context lean. Read only the reference file needed for the current step.
+## 必须输出的规则
 
-## Fast path
+- 字体：字体族、加载位置、fallback、标题、正文、标签、代码字体。
+- 颜色：页面背景、面板背景、主文本、弱文本、品牌色、边框、焦点、成功、警告、危险、信息色。
+- 间距：基础单位、页面边距、区块间距、卡片内距、表单间距、控件高度、移动端收敛。
+- 布局：默认 flex；明确容器方向、换行、间隔、对齐和移动端排列。
+- 图标：SVG 和彩色 PNG 图标按项目情况封装为组件；目录、命名、调用、颜色、尺寸、可访问性必须明确。
+- 按钮：所有按钮走统一按钮组件或组件库适配层；页面不得各写一套按钮样式。
+- 动效：等级、时长、缓动、允许场景、禁用场景、低动效模式必须明确。
 
-If the project already has `design-theme.json` and `DESIGN_GUIDE.md`, read them first and use them as the source of truth before changing any page.
+## 流程
 
-## Workflow
+1. 审计项目
+   找到样式入口、主题文件、设计规范、公共组件、按钮实现、图标目录、动画库、构建方式。
 
-1. `Audit project`
-   Inspect style entrypoints, tokens, fonts, radii, shadows, component primitives, animation libraries, page types, content language, and density.
-   If an existing design system exists, inherit and extend it.
+2. 判断范围
+   记录本次作用范围：全项目、某个应用、某个页面类型、某组组件。不要假设固定页面结构。
 
-2. `Classify surface`
-   Read `references/page-patterns.md`.
-   Pick one surface: `marketing`, `docs`, `product`, `dashboard`, or `settings`.
+3. 定规则
+   读取 `references/style-framework.md`。确定字体、颜色、间距、圆角、阴影、信息密度和风格方向。
 
-3. `Choose style direction`
-   Read `references/style-framework.md`.
-   Pick exactly one primary direction. Do not blend multiple primaries.
-   Resolve token roles, type hierarchy, surface language, spacing rhythm, and page cadence.
+4. 定图标和按钮
+   读取 `references/adapter-rules.md`。确定 SVG 存放目录、调用规则、按钮组件或适配层。
 
-4. `Set motion policy`
-   Read `references/motion-policy.md`.
-   Pick one level: `none`, `subtle`, `standard`, or `expressive`.
-   Only add motion when it explains change, preserves context, reinforces hierarchy, gives feedback, improves perceived performance, or establishes brand rhythm.
+5. 定动效
+   读取 `references/motion-policy.md`。默认用 CSS；只有现有库不足时才新增动画库。
 
-5. `Pick adapter`
-   Read `references/adapter-rules.md`.
-   Pick `CSS` or `Tailwind CSS`.
-   Keep framework-specific implementation out of the design system unless the project context explicitly requires it.
+6. 选择适配方式
+   使用项目已有样式方案。优先全局 CSS，其次 Tailwind CSS 映射，最后组件库主题适配。不要为视觉改造强行引入 Tailwind 或组件库。
 
-6. `Pick library only if needed`
-   Default order:
-   - `CSS` for simple transitions and local reveals
-   - `Motion` for layout, stagger, gestures, section reveals, and scroll-triggered work
-   - `GSAP` for timelines, complex hero choreography, and heavy scroll narratives
-   - `Lenis` only on explicit smooth-scroll or immersive-scroll requirements, and only when the project can absorb its tradeoffs
-   If the project already has a suitable animation library, reuse it instead of adding another.
-
-7. `Materialize snapshot`
-   Create or update:
-   - `design-theme.json`
+7. 写入规范
+   优先更新项目已有设计规范文件。没有时按项目结构创建：
    - `DESIGN_GUIDE.md`
-   - `design-tokens.css`
-   - `motion-tokens.css`
-   - `tailwind.design.preset.js` only if the project uses Tailwind CSS
-   Use the files in `templates/` as starting points.
+   - `design-theme.json`
+   - `design-variables.css`
+   - `motion-variables.css`
+   - 使用 Tailwind CSS 时增加 `tailwind.design.preset.js`
 
-8. `Apply page changes`
-   Any page rewrite must read the snapshot files first.
-   Page work should inherit the project system, not reinvent it.
+8. 按需落地
+   只有用户要求改页面或组件时才改代码。页面必须复用设计变量、SVG 图标规则和按钮组件。
 
-9. `Verify`
-   Check consistency, contrast, interaction clarity, reduced-motion behavior, mobile behavior, and dependency fit.
+9. 验证
+   检查目录无硬编码假设、颜色和间距无散落重复、按钮已组件化、SVG 未重复粘贴、移动端可用、低动效可用。
 
-## Output contract
+## 图标规则
 
-Every run should leave behind:
+- 先找现有图标目录；没有时在当前应用的资源目录下创建 `icons` 目录。
+- SVG、彩色 PNG、品牌图形等可复用图标，必须按项目情况封装为 Icon 组件或 图标型图片组件。
+- 只有需要公网 URL 直接访问的图标才放到公开静态目录。
+- 文件名用小写短横线：`arrow-right.svg`、`brand-mark.png`。
+- 普通 UI 图标默认使用 `currentColor`。
+- 彩色 PNG 图标保留原色，但尺寸、替代文本、懒加载规则由组件统一。
+- 同一图标只维护一个源文件。
+- 不在页面里重复粘贴 SVG path 或散写 `<img>` 样式。
+- 优先通过统一 Icon 组件、构建导入或资源 helper 调用。
 
-- one chosen surface
-- one chosen style direction
-- one motion level
-- one adapter
-- fixed snapshot files with stable names
+## 布局规则
 
-When the user only asks for ideas, still respond in this structure:
+- 默认使用 flex。
+- 用 gap 管理间距，不用临时 margin 拼布局。
+- 需要行列同时严格对齐时用 grid。
+- 展示真实表格数据时用 table 或表格组件。
+- 移动端必须明确换行、堆叠和顺序。
 
-- surface
-- direction
-- motion level
-- adapter
-- snapshot files to create or update
+## 按钮规则
 
-## Anti-patterns
+- 先找已有按钮组件或组件库按钮。
+- 没有按钮组件时，在现有公共组件目录创建一个。
+- 按钮组件必须支持：样式类型、尺寸、原生 type、禁用、加载、图标前后缀、链接态、全宽、焦点态、测试标识。
+- 按钮颜色、字号、间距、圆角、阴影、动效全部来自设计变量。
+- 页面只传语义、文案、跳转和状态，不写按钮视觉样式。
 
-- default purple/blue gradient answers
-- global glassmorphism as the only visual idea
-- glow everywhere
-- one different style per section
-- heavy animation on high-frequency interactions
-- animation as the only way to communicate state
-- binding the system to a framework without evidence
-- adding multiple animation libraries in parallel without a clear reason
+## 输出格式
 
-## References
+完整执行后说明：
 
-- `references/style-framework.md` for directions, token roles, hierarchy, surfaces, cadence, and anti-patterns
-- `references/motion-policy.md` for motion levels, allowed use, timing, behavior rules, and reduced-motion policy
-- `references/page-patterns.md` for surface classification
-- `references/adapter-rules.md` for CSS vs Tailwind CSS and library selection
-- `templates/` for fixed snapshot file starters
+- 范围
+- 风格方向
+- 适配方式
+- 字体规则
+- 颜色规则
+- 间距规则
+- SVG 目录和调用规则
+- 按钮组件规则
+- 动效规则
+- 更新的文件
 
-This is a workflow skill. It should make future design work cheaper, not just make one page prettier.
+## 禁止
+
+- 写死某个项目路径。
+- 写死固定页面区块名。
+- 使用难懂的设计变量名。
+- 页面里散落颜色、字号、间距。
+- 每个页面写一套按钮。
+- 重复复制 SVG path。
+- 为视觉效果新增无必要依赖。

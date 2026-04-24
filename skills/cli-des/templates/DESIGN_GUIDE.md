@@ -1,76 +1,74 @@
-# Design Guide
+# 设计规范
 
-## Snapshot
+## 范围
 
-- Project:
-- Surface:
-- Audience:
-- Tone:
-- Density:
-- Brand maturity:
+- 项目：
+- 应用或模块：
+- 界面类型：
+- 适配方式：
 
-## Style system
+## 字体
 
-### Direction
+- `heading`：
+- `body`：
+- `label`：
+- `code`：
+- 加载位置：
+- fallback：
 
-- Primary direction:
-- Secondary influence:
+## 颜色
 
-### Token roles
+- `pageBg`：
+- `panelBg`：
+- `text`：
+- `mutedText`：
+- `brand`：
+- `border`：
+- `focus`：
+- `success`：
+- `warning`：
+- `danger`：
+- `info`：
 
-- `bg.canvas`:
-- `bg.elevated`:
-- `surface.primary`:
-- `surface.secondary`:
-- `text.default`:
-- `text.muted`:
-- `text.inverse`:
-- `accent.primary`:
-- `accent.secondary`:
-- `border.soft`:
-- `border.strong`:
-- `shadow.soft`:
-- `shadow.focus`:
+## 间距
 
-### Type hierarchy
+- `base`：
+- `pageX`：
+- `sectionY`：
+- `panelPadding`：
+- `fieldGap`：
+- `controlHeight`：
+- 移动端规则：
 
-- `display`:
-- `title`:
-- `section`:
-- `body`:
-- `meta`:
-- `mono`:
+## SVG 图标
 
-### Surface language
+- 目录：
+- 公开静态目录：
+- 调用方式：
+- 命名规则：
+- 颜色规则：
+- 尺寸规则：
+- 可访问性：
 
-- Primary:
-- Secondary:
+## 按钮
 
-### Spacing rhythm
+- 组件路径：
+- 样式类型：
+- 尺寸：
+- 状态：
+- 图标：
+- 链接：
+- 测试标识：
+- 页面限制：
 
-- Rhythm:
+## 动效
 
-### Page cadence
+- 等级：
+- 动画库：
+- 时长：
+- 禁止场景：
+- 低动效模式：
 
-- `hero`:
-- `proof`:
-- `features`:
-- `detail`:
-- `cta`:
+## 更新文件
 
-## Motion
-
-- Level:
-- Allowed patterns:
-- Disallowed patterns:
-- Library:
-
-## Adapter
-
-- Style adapter:
-- Snapshot files updated:
-
-## Notes
-
-- Reuse existing design system where possible
-- Update this file when the project style system changes materially
+-

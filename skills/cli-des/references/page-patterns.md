@@ -1,49 +1,39 @@
-# Page Patterns
+# 界面类型
 
-Use this file during `Classify surface`.
+只用于判断密度、节奏和动效强度，不规定固定页面结构。
 
-## `marketing`
+## `brand`
 
-- Goal: brand impression, trust, and conversion
-- Density: sparse to balanced
-- Cadence: `hero -> proof -> features -> detail -> cta`
-- Motion default: `subtle` or `standard`
-- Good directions: `future-brand`, `signal-minimal`, `editorial-tech`
-
-## `docs`
-
-- Goal: clarity, orientation, and fast scanning
-- Density: balanced
-- Cadence: `hero or intro -> navigation aid -> proof or examples -> detail -> cta`
-- Motion default: `none` or `subtle`
-- Good directions: `signal-minimal`, `editorial-tech`
+- 目标：信任、记忆、转化。
+- 密度：低到中。
+- 动效：可用轻量进入和品牌节奏。
 
 ## `product`
 
-- Goal: explain capability and reduce objections
-- Density: balanced
-- Cadence: `hero -> proof -> features -> detail -> cta`
-- Motion default: `subtle` or `standard`
-- Good directions: `future-brand`, `signal-minimal`, `industrial-data`
+- 目标：解释能力，降低疑问。
+- 密度：中。
+- 动效：少量反馈和区块过渡。
 
-## `dashboard`
+## `docs`
 
-- Goal: maintain context and support frequent action
-- Density: balanced to dense
-- Cadence: persistent navigation, fast scanning, minimal interruption
-- Motion default: `none` or `subtle`
-- Good directions: `industrial-data`, `signal-minimal`
+- 目标：阅读、查找、复制、导航。
+- 密度：中。
+- 动效：少或无。
+
+## `data`
+
+- 目标：扫描、比较、操作。
+- 密度：中到高。
+- 动效：只保留必要反馈。
 
 ## `settings`
 
-- Goal: safety, clarity, and low friction
-- Density: balanced
-- Cadence: short intro, grouped controls, clear save or destructive boundaries
-- Motion default: `none` or `subtle`
-- Good directions: `signal-minimal`, `industrial-data`
+- 目标：安全、清晰、可恢复。
+- 密度：中。
+- 动效：只保留状态反馈。
 
-## Rules
+## 规则
 
-- Pick the closest surface first; do not invent a new one unless the project truly needs it
-- If a page mixes two surface types, choose the dominant one and note the secondary influence in `DESIGN_GUIDE.md`
-- Surface choice should affect cadence and motion before it affects palette
+- 选择最接近的类型。
+- 混合页面只记录一个主类型。
+- 不因类型变化而改掉全项目字体、颜色、间距、图标和按钮规则。

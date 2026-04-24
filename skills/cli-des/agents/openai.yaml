@@ -1,7 +1,7 @@
 interface:
   display_name: "CLI DES"
-  short_description: "Materialize reusable web design systems"
-  default_prompt: "Use $cli-des to audit this project and materialize a reusable design system snapshot before changing pages."
+  short_description: "制定通用 UI 设计系统规则"
+  default_prompt: "使用 $cli-des 审计当前项目，制定字体、颜色、间距、SVG 图标、按钮组件和动效规则，再按需落地页面。"
 
 policy:
   allow_implicit_invocation: true

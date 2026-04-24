@@ -1,57 +1,67 @@
 {
   "schemaVersion": 1,
-  "surface": "marketing",
-  "styleDirection": "future-brand",
-  "audience": "",
-  "tone": "",
-  "density": "neutral",
-  "brandMaturity": "",
-  "adapter": "css",
-  "motionLevel": "subtle",
-  "libraries": {
-    "style": "css",
-    "motion": "css"
-  },
-  "surfaceLanguage": {
-    "primary": "clean",
-    "secondary": ""
-  },
-  "spacingRhythm": "neutral",
-  "pageCadence": {
-    "hero": "",
-    "proof": "",
-    "features": "",
-    "detail": "",
-    "cta": ""
-  },
-  "tokenRoles": {
-    "bg.canvas": "",
-    "bg.elevated": "",
-    "surface.primary": "",
-    "surface.secondary": "",
-    "text.default": "",
-    "text.muted": "",
-    "text.inverse": "",
-    "accent.primary": "",
-    "accent.secondary": "",
-    "border.soft": "",
-    "border.strong": "",
-    "shadow.soft": "",
-    "shadow.focus": ""
-  },
-  "typeHierarchy": {
-    "display": "",
-    "title": "",
-    "section": "",
+  "scope": "",
+  "interfaceType": "",
+  "adapter": "",
+  "styleDirection": "",
+  "typography": {
+    "heading": "",
     "body": "",
-    "meta": "",
-    "mono": ""
+    "label": "",
+    "code": "",
+    "loading": "",
+    "fallback": ""
   },
-  "antiPatterns": [
-    "default purple/blue gradient answers",
-    "global glassmorphism",
-    "glow everywhere",
-    "one different style per section",
-    "heavy animation on high-frequency interactions"
-  ]
+  "colors": {
+    "pageBg": "",
+    "panelBg": "",
+    "text": "",
+    "mutedText": "",
+    "brand": "",
+    "border": "",
+    "focus": "",
+    "success": "",
+    "warning": "",
+    "danger": "",
+    "info": ""
+  },
+  "spacing": {
+    "base": "",
+    "pageX": "",
+    "sectionY": "",
+    "panelPadding": "",
+    "fieldGap": "",
+    "controlHeight": "",
+    "mobile": ""
+  },
+  "radius": {
+    "control": "",
+    "panel": ""
+  },
+  "icons": {
+    "format": "svg",
+    "directory": "",
+    "publicDirectory": "",
+    "callingRule": "",
+    "accessibilityRule": ""
+  },
+  "buttons": {
+    "component": "",
+    "variants": [],
+    "sizes": [],
+    "states": [
+      "default",
+      "hover",
+      "focus",
+      "disabled",
+      "loading"
+    ],
+    "usageRule": ""
+  },
+  "motion": {
+    "level": "",
+    "library": "",
+    "duration": "",
+    "reducedMotion": ""
+  }
 }
