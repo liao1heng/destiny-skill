@@ -47,7 +47,7 @@ description: 通用 UI 设计系统工作流。用于统一或重构字体、颜
    使用项目已有样式方案。优先全局 CSS，其次 Tailwind CSS 映射，最后组件库主题适配。不要为视觉改造强行引入 Tailwind 或组件库。
 
 7. 写入规范
-   优先更新项目已有设计规范文件。没有时按项目结构创建：
+   优先更新项目已有设计规范文件。没有时按项目结构创建：在项目AGENTS.Md 中声明 写样式必须遵循DESIGN_GUIDE.md
    - `DESIGN_GUIDE.md`
    - `design-theme.json`
    - `design-variables.css`
