@@ -17,6 +17,7 @@ DEFAULT_MANAGED_SKILLS = [
     "cli-arc",
     "cli-des",
     "cli-dev",
+    "cli-mimo",
     "cli-init",
     "cli-pm",
     "cli-sync",
@@ -362,7 +363,7 @@ def main() -> int:
     config = build_config()
 
     username = str(config["github_username"])
-    token = str(config["github_token"])
+    token = config["github_token"]
     remote_url = str(config["remote_url"])
     branch = str(config["branch"])
     repo_path = Path(config["repo_path"])

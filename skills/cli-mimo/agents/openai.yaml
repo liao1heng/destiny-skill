@@ -1,0 +1,7 @@
+interface:
+  display_name: "CLI MiMo"
+  short_description: "Run detached Claude Code MiMo workers"
+  default_prompt: "Use $cli-mimo to launch a parallel Claude Code worker through Xiaomi MiMo."
+
+policy:
+  allow_implicit_invocation: false

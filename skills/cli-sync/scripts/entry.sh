@@ -25,15 +25,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-python_cmd=""
-if command -v python3 >/dev/null 2>&1; then
-  python_cmd="python3"
-elif command -v python >/dev/null 2>&1; then
-  python_cmd="python"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+test_python() {
+  local cmd="$1"
+  command -v "$cmd" >/dev/null 2>&1 || return 1
+  "$cmd" -c 'import sys' >/dev/null 2>&1
+}
+
+if test_python python3; then
+  exec python3 "$script_dir/sync_skills.py" --mode "$mode" --message "$message"
+elif test_python python; then
+  exec python "$script_dir/sync_skills.py" --mode "$mode" --message "$message"
+elif command -v uv >/dev/null 2>&1; then
+  exec uv run --python 3.11 "$script_dir/sync_skills.py" --mode "$mode" --message "$message"
 else
-  echo "Python is required for cli-sync but was not found in PATH." >&2
+  echo "cli-sync requires a working Python interpreter or uv, but neither is available." >&2
   exit 1
 fi
-
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "$python_cmd" "$script_dir/sync_skills.py" --mode "$mode" --message "$message"

@@ -24,6 +24,7 @@ description: 用于把本机 Codex 自定义 skill 与固定 GitHub 仓库 desti
 - `cli-arc`
 - `cli-des`
 - `cli-dev`
+- `cli-mimo`
 - `cli-init`
 - `cli-pm`
 - `cli-sync`
@@ -54,6 +55,6 @@ bash skills/cli-sync/scripts/entry.sh --mode push --message "Sync local Codex sk
 
 ## 注意
 
-- 支持 Windows 和 macOS；核心逻辑使用 Python。
+- 支持 Windows 和 macOS；核心逻辑使用 Python，找不到可用 Python 时回退到 `uv run`。
 - 不需要再创建 `auth.ps1` 或机器路径配置。
 - GitHub HTTPS 认证使用 token，不使用 GitHub 账户密码。
