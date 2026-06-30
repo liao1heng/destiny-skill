@@ -29,6 +29,7 @@ description: 用于把本机 Codex 自定义 skill 与固定 GitHub 仓库 desti
 - `cli-pm`
 - `cli-sync`
 - `cli-test`
+- `cli-vpn-install`
 - `figma`
 
 ## 工作流

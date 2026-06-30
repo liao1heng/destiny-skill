@@ -1,0 +1,7 @@
+interface:
+  display_name: "CLI VPN Install"
+  short_description: "Install portable VPN commands and runtime"
+  default_prompt: "Use $cli-vpn-install to install the portable vpn/voff command set and its local runtime on this machine."
+
+policy:
+  allow_implicit_invocation: true

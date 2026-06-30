@@ -1,0 +1,215 @@
+{
+  "version": 1,
+  "routes": [
+    {
+      "group": "Google",
+      "kind": "network",
+      "prefix": "142.250.0.0/15",
+      "label": "Google main block"
+    },
+    {
+      "group": "Google",
+      "kind": "network",
+      "prefix": "172.217.0.0/16",
+      "label": "Google main block"
+    },
+    {
+      "group": "Google",
+      "kind": "network",
+      "prefix": "74.125.0.0/16",
+      "label": "Google main block"
+    },
+    {
+      "group": "Google",
+      "kind": "network",
+      "prefix": "108.177.8.0/21",
+      "label": "Google service range"
+    },
+    {
+      "group": "Google",
+      "kind": "network",
+      "prefix": "173.194.0.0/16",
+      "label": "Google service range"
+    },
+    {
+      "group": "Google",
+      "kind": "network",
+      "prefix": "209.85.128.0/17",
+      "label": "Google service range"
+    },
+    {
+      "group": "Google",
+      "kind": "network",
+      "prefix": "216.58.192.0/19",
+      "label": "Google service range"
+    },
+    {
+      "group": "Google",
+      "kind": "network",
+      "prefix": "216.239.32.0/19",
+      "label": "Google service range"
+    },
+    {
+      "group": "Google",
+      "kind": "network",
+      "prefix": "64.233.160.0/19",
+      "label": "Google service range"
+    },
+    {
+      "group": "Google",
+      "kind": "network",
+      "prefix": "66.102.0.0/20",
+      "label": "Google service range"
+    },
+    {
+      "group": "Google",
+      "kind": "network",
+      "prefix": "66.249.64.0/19",
+      "label": "Google service range"
+    },
+    {
+      "group": "Google",
+      "kind": "network",
+      "prefix": "172.253.0.0/16",
+      "label": "Google accounts range"
+    },
+    {
+      "group": "DNS",
+      "kind": "network",
+      "prefix": "8.8.8.0/24",
+      "label": "Google DNS"
+    },
+    {
+      "group": "DNS",
+      "kind": "network",
+      "prefix": "8.8.4.0/24",
+      "label": "Google DNS"
+    },
+    {
+      "group": "DNS",
+      "kind": "network",
+      "prefix": "1.1.1.0/24",
+      "label": "Cloudflare DNS"
+    },
+    {
+      "group": "DNS",
+      "kind": "network",
+      "prefix": "1.0.0.0/24",
+      "label": "Cloudflare DNS backup"
+    },
+    {
+      "group": "OpenAI",
+      "kind": "network",
+      "prefix": "104.16.0.0/12",
+      "label": "Cloudflare primary range"
+    },
+    {
+      "group": "OpenAI",
+      "kind": "network",
+      "prefix": "172.64.0.0/13",
+      "label": "Cloudflare backup range"
+    },
+    {
+      "group": "OpenAI",
+      "kind": "network",
+      "prefix": "162.159.0.0/16",
+      "label": "Cloudflare API range"
+    },
+    {
+      "group": "OpenAI",
+      "kind": "network",
+      "prefix": "13.107.246.0/24",
+      "label": "Azure CDN range"
+    },
+    {
+      "group": "OpenAI",
+      "kind": "network",
+      "prefix": "13.107.253.0/24",
+      "label": "Azure CDN backup range"
+    },
+    {
+      "group": "OpenAI",
+      "kind": "network",
+      "prefix": "13.107.226.0/24",
+      "label": "Azure CDN backup range"
+    },
+    {
+      "group": "DNS",
+      "kind": "network",
+      "prefix": "4.2.2.0/24",
+      "label": "Level3 DNS backup"
+    },
+    {
+      "group": "ip.cn",
+      "kind": "host",
+      "prefix": "118.252.5.26/32",
+      "label": "ip.cn current host"
+    },
+    {
+      "group": "ip.cn",
+      "kind": "host",
+      "prefix": "222.246.147.195/32",
+      "label": "ip.cn backup host"
+    },
+    {
+      "group": "ip.cn",
+      "kind": "host",
+      "prefix": "153.43.76.226/32",
+      "label": "ip.cn cloudflare host"
+    },
+    {
+      "group": "OpenAI Developers",
+      "kind": "network",
+      "prefix": "64.239.108.0/22",
+      "label": "Vercel edge range"
+    },
+    {
+      "group": "OpenAI Developers",
+      "kind": "network",
+      "prefix": "64.239.120.0/22",
+      "label": "Vercel edge backup range"
+    },
+    {
+      "group": "Cloudflare",
+      "kind": "network",
+      "prefix": "104.0.0.0/11",
+      "label": "Cloudflare broad range"
+    },
+    {
+      "group": "GitHub",
+      "kind": "network",
+      "prefix": "140.82.112.0/20",
+      "label": "GitHub primary range"
+    },
+    {
+      "group": "GitHub",
+      "kind": "network",
+      "prefix": "192.30.252.0/22",
+      "label": "GitHub legacy range"
+    },
+    {
+      "group": "GitHub",
+      "kind": "network",
+      "prefix": "185.199.108.0/22",
+      "label": "GitHub pages range"
+    },
+    {
+      "group": "GitHub",
+      "kind": "network",
+      "prefix": "143.55.64.0/20",
+      "label": "GitHub actions range"
+    },
+    {
+      "group": "GitHub",
+      "kind": "network",
+      "prefix": "20.205.243.0/24",
+      "label": "GitHub Azure range"
+    },
+    {
+      "group": "GitHub",
+      "kind": "network",
+      "prefix": "20.201.28.0/24",
+      "label": "GitHub Azure backup range"
+    }
+  ]
+}

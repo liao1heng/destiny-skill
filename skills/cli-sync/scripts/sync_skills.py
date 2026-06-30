@@ -22,6 +22,7 @@ DEFAULT_MANAGED_SKILLS = [
     "cli-pm",
     "cli-sync",
     "cli-test",
+    "cli-vpn-install",
     "figma",
 ]
 IGNORE_NAMES = {"__pycache__", ".DS_Store", "Thumbs.db"}

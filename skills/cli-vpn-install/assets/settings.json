@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "bundle_name": "destiny",
+  "connect_timeout_seconds": 20,
+  "watch_interval_seconds": 60,
+  "tunnel_ipv4_prefixes": [
+    "172."
+  ],
+  "macos": {
+    "dns_servers": [
+      "1.1.1.1"
+    ],
+    "disable_ipv6": true
+  },
+  "windows": {
+    "scheduled_task_folder": "\\Codex\\",
+    "task_prefix": "CliVpnInstall"
+  }
+}

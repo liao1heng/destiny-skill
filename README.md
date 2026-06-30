@@ -16,6 +16,7 @@ skills/
   cli-pm/
   cli-sync/
   cli-test/
+  cli-vpn-install/
   figma/
 ```
 
