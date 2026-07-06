@@ -6,14 +6,18 @@
   "tunnel_ipv4_prefixes": [
     "172."
   ],
+  "windows": {
+    "scheduled_task_folder": "\\Codex\\",
+    "task_prefix": "CliVpnInstall",
+    "route_nopull": true,
+    "disable_ipv6": true,
+    "block_google_ipv6": true,
+    "dns_fix": true
+  },
   "macos": {
     "dns_servers": [
       "1.1.1.1"
     ],
     "disable_ipv6": true
-  },
-  "windows": {
-    "scheduled_task_folder": "\\Codex\\",
-    "task_prefix": "CliVpnInstall"
   }
 }

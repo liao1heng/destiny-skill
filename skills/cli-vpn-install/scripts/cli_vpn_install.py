@@ -661,6 +661,19 @@ def rewrite_auth_user_pass(ovpn_text: str, auth_path: Path) -> str:
             updated.append(line)
     if not replaced:
         updated.append(f"auth-user-pass {auth_path_text}")
+
+    win_settings = settings().get("windows", {})
+    if win_settings.get("route_nopull", False):
+        if not any(l.strip().startswith("route-nopull") for l in updated):
+            updated.append("route-nopull")
+        if not any("pull-filter ignore" in l and "redirect-gateway" in l for l in updated):
+            updated.append("pull-filter ignore \"redirect-gateway\"")
+    if win_settings.get("disable_ipv6", False):
+        if not any("pull-filter ignore" in l and "route-ipv6" in l for l in updated):
+            updated.append("pull-filter ignore \"route-ipv6\"")
+        if not any("pull-filter ignore" in l and "ifconfig-ipv6" in l for l in updated):
+            updated.append("pull-filter ignore \"ifconfig-ipv6\"")
+
     return "\n".join(updated) + "\n"
 
 
@@ -735,14 +748,15 @@ Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | ForEach-Obj
     foreach ($prefix in $prefixes) {
         if ($_.IPAddress.StartsWith($prefix)) { $match = $true; break }
     }
-    if ($match) {
-        $items += [PSCustomObject]@{
-            Name = $_.InterfaceAlias
-            IPAddress = $_.IPAddress
-            InterfaceIndex = $_.InterfaceIndex
-            Description = $adapter.InterfaceDescription
-            Status = $adapter.Status
-        }
+    if (-not $match) { return }
+    $desc = $adapter.InterfaceDescription
+    if ($desc -notmatch 'OpenVPN|TAP|Wintun|DCO|Data Channel Offload') { return }
+    $items += [PSCustomObject]@{
+        Name = $_.InterfaceAlias
+        IPAddress = $_.IPAddress
+        InterfaceIndex = $_.InterfaceIndex
+        Description = $adapter.InterfaceDescription
+        Status = $adapter.Status
     }
 }
 $items | ConvertTo-Json -Depth 3
@@ -1142,6 +1156,8 @@ Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | ForEach-Obj
     }
     if (-not $matchesPrefix) { return }
     if ($adapter.Status -ne 'Up') { return }
+    $desc = $adapter.InterfaceDescription
+    if ($desc -notmatch 'OpenVPN|TAP|Wintun|DCO|Data Channel Offload') { return }
     $items += [PSCustomObject]@{
         InterfaceAlias = $_.InterfaceAlias
         InterfaceIndex = $_.InterfaceIndex
@@ -1163,16 +1179,20 @@ def start_openvpn_windows() -> int:
         creation_flags |= subprocess.CREATE_NEW_PROCESS_GROUP
     if hasattr(subprocess, "DETACHED_PROCESS"):
         creation_flags |= subprocess.DETACHED_PROCESS
+    cmd = [
+        openvpn_binary,
+        "--config",
+        str(managed_config_path()),
+        "--log-append",
+        str(openvpn_log_path()),
+        "--writepid",
+        str(openvpn_pid_path()),
+    ]
+    win_settings = settings().get("windows", {})
+    if win_settings.get("route_nopull", False):
+        cmd.append("--route-nopull")
     process = subprocess.Popen(
-        [
-            openvpn_binary,
-            "--config",
-            str(managed_config_path()),
-            "--log-append",
-            str(openvpn_log_path()),
-            "--writepid",
-            str(openvpn_pid_path()),
-        ],
+        cmd,
         creationflags=creation_flags,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -1225,9 +1245,175 @@ def wait_for_windows_tunnel(timeout_seconds: int) -> dict:
     raise RuntimeError("Timed out waiting for the Windows VPN tunnel to become ready.")
 
 
+GOOGLE_IPV6_RANGES = [
+    "2404:6800::/32",
+    "2600:1900::/28",
+    "2607:f8b0::/32",
+    "2800:3f0::/48",
+    "2a00:1450::/40",
+]
+
+FIREWALL_RULE_PREFIX = "CliVpnBlockGoogleIPv6"
+
+
+def disable_windows_tunnel_ipv6(interface_alias: str) -> None:
+    powershell(
+        f"Disable-NetAdapterBinding -Name '{interface_alias}' -ComponentID ms_tcpip6 -ErrorAction SilentlyContinue",
+        check=False,
+    )
+
+
+def enable_windows_tunnel_ipv6(interface_alias: str) -> None:
+    powershell(
+        f"Enable-NetAdapterBinding -Name '{interface_alias}' -ComponentID ms_tcpip6 -ErrorAction SilentlyContinue",
+        check=False,
+    )
+
+
+def add_google_ipv6_firewall_rules() -> None:
+    for cidr in GOOGLE_IPV6_RANGES:
+        rule_name = f"{FIREWALL_RULE_PREFIX}_{cidr.replace(':', '_').replace('/', '_')}"
+        powershell(
+            f"""
+$existing = Get-NetFirewallRule -DisplayName '{rule_name}' -ErrorAction SilentlyContinue
+if ($existing) {{ Remove-NetFirewallRule -DisplayName '{rule_name}' -ErrorAction SilentlyContinue }}
+New-NetFirewallRule -DisplayName '{rule_name}' -Direction Outbound -Action Block -RemoteAddress '{cidr}' -Profile Any -Enabled True -Group 'CliVpn' | Out-Null
+""",
+            check=False,
+        )
+
+
+def remove_google_ipv6_firewall_rules() -> None:
+    powershell(
+        f"Get-NetFirewallRule -DisplayName '{FIREWALL_RULE_PREFIX}*' -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue",
+        check=False,
+    )
+
+
 def windows_watch_task_running() -> bool:
     result = run_command(["schtasks", "/Query", "/TN", windows_task_name("Watch"), "/FO", "LIST", "/V"], capture_output=True)
     return result.returncode == 0 and "Status: Running" in result.stdout
+
+
+# --- DNS anti-poisoning via hosts file ---
+
+HOSTS_MARKER_BEGIN = "# BEGIN CLI-VPN DNS FIX"
+HOSTS_MARKER_END = "# END CLI-VPN DNS FIX"
+HOSTS_PATH = Path(r"C:\Windows\System32\drivers\etc\hosts")
+
+DNS_FIX_DOMAINS = [
+    "www.google.com",
+    "google.com",
+    "accounts.google.com",
+    "accounts.google.com.sg",
+    "mail.google.com",
+    "drive.google.com",
+    "docs.google.com",
+    "gemini.google.com",
+    "www.youtube.com",
+    "youtube.com",
+    "github.com",
+    "api.github.com",
+    "raw.githubusercontent.com",
+    "gist.github.com",
+    "codeload.github.com",
+    "objects.githubusercontent.com",
+    "api.openai.com",
+    "chat.openai.com",
+    "platform.openai.com",
+]
+
+
+def resolve_via_vpn_dns(domain: str) -> list[str]:
+    try:
+        result = subprocess.run(
+            ["nslookup", domain, "8.8.8.8"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return []
+    ips: list[str] = []
+    for line in (result.stdout or "").splitlines():
+        stripped = line.strip()
+        if re.match(r"^\d+\.\d+\.\d+\.\d+$", stripped) and stripped not in ("8.8.8.8", "8.8.4.4"):
+            ips.append(stripped)
+    return ips
+
+
+def refresh_dns_hosts_windows() -> None:
+    entries: list[str] = []
+    for domain in DNS_FIX_DOMAINS:
+        for ip in resolve_via_vpn_dns(domain):
+            entries.append(f"{ip} {domain}")
+    if not entries:
+        return
+    old_content = HOSTS_PATH.read_text(encoding="utf-8", errors="ignore") if HOSTS_PATH.exists() else ""
+    if HOSTS_MARKER_BEGIN in old_content:
+        pattern = re.compile(re.escape(HOSTS_MARKER_BEGIN) + r".*?" + re.escape(HOSTS_MARKER_END) + r"\n?", re.DOTALL)
+        old_content = pattern.sub("", old_content)
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    new_block = f"\n{HOSTS_MARKER_BEGIN} ({timestamp})\n"
+    new_block += "# Auto-generated by cli-vpn-install to bypass DNS poisoning\n"
+    for entry in sorted(set(entries)):
+        new_block += f"{entry}\n"
+    new_block += f"{HOSTS_MARKER_END}\n"
+    HOSTS_PATH.write_text(old_content.rstrip() + "\n" + new_block, encoding="ascii", errors="ignore")
+    run_command(["ipconfig", "/flushdns"], capture_output=True, check=False)
+
+
+def clean_dns_hosts_windows() -> None:
+    if not HOSTS_PATH.exists():
+        return
+    content = HOSTS_PATH.read_text(encoding="utf-8", errors="ignore")
+    if HOSTS_MARKER_BEGIN not in content:
+        return
+    pattern = re.compile(re.escape(HOSTS_MARKER_BEGIN) + r".*?" + re.escape(HOSTS_MARKER_END) + r"\n?", re.DOTALL)
+    content = pattern.sub("", content).rstrip() + "\n"
+    HOSTS_PATH.write_text(content, encoding="ascii", errors="ignore")
+    run_command(["ipconfig", "/flushdns"], capture_output=True, check=False)
+
+
+def set_windows_primary_dns() -> None:
+    result = run_command(
+        ["powershell", "-Command",
+         "$r = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1; "
+         "$idx = $r.InterfaceIndex; "
+         "$dns = Get-DnsClientServerAddress -InterfaceIndex $idx -AddressFamily IPv4 -ErrorAction SilentlyContinue; "
+         "if ($dns) { $dns.ServerAddresses -join ',' } else { '' }"],
+        capture_output=True,
+    )
+    old_dns = result.stdout.strip() if result.stdout else ""
+    state = load_state()
+    state["original_dns"] = old_dns
+    save_state(state)
+    run_command(
+        ["powershell", "-Command",
+         "$r = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1; "
+         "$idx = $r.InterfaceIndex; "
+         "Set-DnsClientServerAddress -InterfaceIndex $idx -ServerAddresses @('8.8.8.8','1.1.1.1')"],
+        capture_output=True, check=False,
+    )
+    run_command(["ipconfig", "/flushdns"], capture_output=True, check=False)
+
+
+def restore_windows_primary_dns() -> None:
+    state = load_state()
+    old_dns_str = state.get("original_dns", "")
+    if not old_dns_str:
+        return
+    old_dns = [s.strip() for s in old_dns_str.split(",") if s.strip()]
+    result = run_command(
+        ["powershell", "-Command",
+         "$r = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1; "
+         "$idx = $r.InterfaceIndex; "
+         f"Set-DnsClientServerAddress -InterfaceIndex $idx -ServerAddresses @({','.join([repr(d) for d in old_dns])})"],
+        capture_output=True, check=False,
+    )
+    state["original_dns"] = None
+    save_state(state)
+    run_command(["ipconfig", "/flushdns"], capture_output=True, check=False)
 
 
 def ensure_windows_watch_task() -> None:
@@ -1240,6 +1426,7 @@ def windows_connect_elevated(*, quiet: bool = False, start_watcher: bool = True)
     if not config_installed():
         raise RuntimeError("VPN config is not installed. Run `cli-vpn-install install` first.")
     state = load_state()
+    win_settings = settings().get("windows", {})
     existing = windows_find_tunnel()
     if current_openvpn_pid() and existing:
         state["connected"] = True
@@ -1247,6 +1434,13 @@ def windows_connect_elevated(*, quiet: bool = False, start_watcher: bool = True)
         state["tunnel_ip"] = existing["IPAddress"]
         state["tunnel_interface_index"] = existing["InterfaceIndex"]
         state["applied_routes"] = apply_routes_windows(existing["InterfaceIndex"])
+        if win_settings.get("disable_ipv6", False):
+            disable_windows_tunnel_ipv6(existing["InterfaceAlias"])
+        if win_settings.get("block_google_ipv6", False):
+            add_google_ipv6_firewall_rules()
+        if win_settings.get("dns_fix", True):
+            set_windows_primary_dns()
+            refresh_dns_hosts_windows()
         save_state(state)
         if start_watcher:
             ensure_windows_watch_task()
@@ -1262,6 +1456,13 @@ def windows_connect_elevated(*, quiet: bool = False, start_watcher: bool = True)
     state["tunnel_ip"] = tunnel["IPAddress"]
     state["tunnel_interface_index"] = tunnel["InterfaceIndex"]
     state["applied_routes"] = apply_routes_windows(tunnel["InterfaceIndex"])
+    if win_settings.get("disable_ipv6", False):
+        disable_windows_tunnel_ipv6(tunnel["InterfaceAlias"])
+    if win_settings.get("block_google_ipv6", False):
+        add_google_ipv6_firewall_rules()
+    if win_settings.get("dns_fix", True):
+        set_windows_primary_dns()
+        refresh_dns_hosts_windows()
     save_state(state)
     if start_watcher:
         ensure_windows_watch_task()
@@ -1271,10 +1472,19 @@ def windows_connect_elevated(*, quiet: bool = False, start_watcher: bool = True)
 
 def windows_disconnect_elevated(*, quiet: bool = False) -> None:
     state = load_state()
+    win_settings = settings().get("windows", {})
     run_command(["schtasks", "/End", "/TN", windows_task_name("Watch")], capture_output=True, check=False)
     pid = current_openvpn_pid()
     if pid:
         run_command(["taskkill", "/PID", str(pid), "/F"], capture_output=True, check=False)
+    interface_alias = state.get("tunnel_interface")
+    if interface_alias and win_settings.get("disable_ipv6", False):
+        enable_windows_tunnel_ipv6(interface_alias)
+    if win_settings.get("block_google_ipv6", False):
+        remove_google_ipv6_firewall_rules()
+    if win_settings.get("dns_fix", True):
+        clean_dns_hosts_windows()
+        restore_windows_primary_dns()
     interface_index = state.get("tunnel_interface_index")
     if isinstance(interface_index, int):
         remove_routes_windows(interface_index, list(state.get("applied_routes", [])))
