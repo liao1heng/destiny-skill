@@ -715,7 +715,26 @@ def rewrite_auth_user_pass(ovpn_text: str, auth_path: Path) -> str:
 
     # Force UDP protocol to avoid TCP-over-TCP performance degradation on
     # international links (latency amplification + double retransmission).
-    if not any(l.strip().startswith("proto ") for l in updated):
+    # 1) Replace any existing proto line with proto udp (or add if missing).
+    # 2) Remove remote entries that explicitly specify tcp — OpenVPN tries
+    #    remotes in order, so a TCP remote listed before UDP remotes will
+    #    win even when proto udp is set globally.
+    filtered: list[str] = []
+    proto_seen = False
+    for line in updated:
+        stripped = line.strip()
+        if stripped.startswith("proto "):
+            if not proto_seen:
+                filtered.append("proto udp")
+                proto_seen = True
+            # skip original proto line (replace with udp)
+        elif stripped.startswith("remote ") and " tcp" in stripped:
+            # skip TCP remote entries to prevent TCP-over-TCP
+            continue
+        else:
+            filtered.append(line)
+    updated = filtered
+    if not proto_seen:
         for i, line in enumerate(updated):
             if line.strip().startswith("nobind"):
                 updated.insert(i + 1, "proto udp")
@@ -1002,18 +1021,30 @@ def apply_macos_network_overrides(password: str, state: dict) -> None:
 
 
 def restore_macos_network_overrides(password: str, state: dict) -> None:
+    mac_settings = settings().get("macos", {})
     pre_connect = state.get("pre_connect", {})
     service = pre_connect.get("network_service")
     if not service:
-        return
+        # pre_connect state was never saved (e.g. watcher restarted OpenVPN
+        # without going through the full connect flow). Fall back to the
+        # primary service so we can still restore DNS and IPv6.
+        service = macos_primary_service()
+        if not service:
+            return
     dns_servers = pre_connect.get("dns_servers", [])
     if dns_servers:
         sudo_run(password, ["networksetup", "-setdnsservers", service, *dns_servers], check=False)
     else:
         sudo_run(password, ["networksetup", "-setdnsservers", service, "empty"], check=False)
-    if pre_connect.get("ipv6_enabled", True):
-        sudo_run(password, ["networksetup", "-setv6automatic", service], check=False)
-    else:
+    # Restore IPv6: if we don't know the pre-connect state (empty pre_connect),
+    # keep IPv6 off — the user's settings say disable_ipv6: true, so err on the
+    # side of keeping it off rather than accidentally re-enabling it.
+    if "ipv6_enabled" in pre_connect:
+        if pre_connect["ipv6_enabled"]:
+            sudo_run(password, ["networksetup", "-setv6automatic", service], check=False)
+        else:
+            sudo_run(password, ["networksetup", "-setv6off", service], check=False)
+    elif mac_settings.get("disable_ipv6"):
         sudo_run(password, ["networksetup", "-setv6off", service], check=False)
 
 
