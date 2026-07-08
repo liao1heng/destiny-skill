@@ -662,6 +662,14 @@ def rewrite_auth_user_pass(ovpn_text: str, auth_path: Path) -> str:
     if not replaced:
         updated.append(f"auth-user-pass {auth_path_text}")
 
+    # Force UDP protocol to avoid TCP-over-TCP performance degradation on
+    # international links (latency amplification + double retransmission).
+    if not any(l.strip().startswith("proto ") for l in updated):
+        for i, line in enumerate(updated):
+            if line.strip().startswith("nobind"):
+                updated.insert(i + 1, "proto udp")
+                break
+
     win_settings = settings().get("windows", {})
     if win_settings.get("route_nopull", False):
         if not any(l.strip().startswith("route-nopull") for l in updated):
