@@ -210,6 +210,24 @@
       "kind": "network",
       "prefix": "20.201.28.0/24",
       "label": "GitHub Azure backup range"
+    },
+    {
+      "group": "Telegram",
+      "kind": "network",
+      "prefix": "149.154.160.0/20",
+      "label": "Telegram main range"
+    },
+    {
+      "group": "Telegram",
+      "kind": "network",
+      "prefix": "91.108.4.0/22",
+      "label": "Telegram DC range"
+    },
+    {
+      "group": "Telegram",
+      "kind": "network",
+      "prefix": "91.108.56.0/22",
+      "label": "Telegram DC range"
     }
   ]
 }

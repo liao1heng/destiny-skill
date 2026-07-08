@@ -78,17 +78,20 @@ Only whitelisted destinations route through the VPN tunnel. All other traffic us
 
 - `settings.json` → `windows.route_nopull: true`
 - OpenVPN launched with `--route-nopull`
-- `.ovpn` injected with `route-nopull` + `pull-filter ignore "redirect-gateway"` at install time
-- Whitelist defined in `assets/whitelist.json` (Google, GitHub, OpenAI, Cloudflare, DNS, etc.)
+- `.ovpn` injected with `route-nopull` + `pull-filter ignore` for `redirect-gateway`, `dhcp-option`, `ping-restart`, `register-dns`, `route-ipv6`, `ifconfig-ipv6` at install time
+- `ping-exit 30` injected so OpenVPN **exits** (not restarts) when the tunnel drops — ensures all reconnections go through the Python watcher (which applies DNS fix), not OpenVPN's internal restart (which skips it)
+- Whitelist defined in `assets/whitelist.json` (Google, GitHub, OpenAI, Cloudflare, Telegram, DNS, etc.)
 
 ### DNS Anti-Poisoning
 
-GFW poisons UDP port 53 DNS queries. Even with DNS set to 8.8.8.8, Windows system resolver receives forged responses. This skill applies a two-layer fix on connect:
+GFW poisons UDP port 53 DNS queries. Even with DNS set to 8.8.8.8, Windows system resolver receives forged responses. This skill applies a four-layer fix on connect:
 
 1. **Primary DNS override** — sets the main adapter's DNS to `8.8.8.8` / `1.1.1.1` (both in whitelist, so DNS queries route through VPN)
-2. **hosts file injection** — resolves whitelisted domains (Google, GitHub, OpenAI, Gemini, YouTube, etc.) via `nslookup <domain> 8.8.8.8` and writes real IPs to `C:\Windows\System32\drivers\etc\hosts`
+2. **hosts file injection** — resolves whitelisted domains (Google, GitHub, OpenAI, Gemini, Telegram, Cloudflare Workers, YouTube, etc.) via `nslookup <domain> 8.8.8.8` and writes real IPs to `C:\Windows\System32\drivers\etc\hosts`
+3. **IPv6 DNS `::1` purge** — OpenVPN's interactive service sets IPv6 DNS to `::1` on multiple adapters, but no process listens on port 53. This causes `dns.resolve*()` (used by Node.js undici `fetch()`) to get ECONNREFUSED, then fall back to IPv4 8.8.8.8 which is GFW-poisoned. The fix clears `::1` via both `netsh interface ipv6 delete dns` and direct registry cleanup (`Tcpip6\Parameters\Interfaces` NameServer values)
+4. **`dhcp-option` filter** — prevents the OpenVPN server from pushing `DNS 127.0.0.1` via the interactive service, which would override `Set-DnsClientServerAddress` at the kernel level
 
-On disconnect, both are restored (DNS reverted to original, hosts entries removed).
+On disconnect, all four layers are restored (DNS reverted to original, hosts entries removed).
 
 - `settings.json` → `windows.dns_fix: true`
 - Domains list: `DNS_FIX_DOMAINS` in `cli_vpn_install.py`
@@ -114,11 +117,31 @@ All VPN operations run with admin privileges via Windows Scheduled Tasks:
 
 | Task | RunLevel | Purpose |
 |------|----------|---------|
-| `CodexCliVpnInstallConnect` | Highest | Start OpenVPN, apply routes, disable IPv6, set DNS, refresh hosts |
+| `CodexCliVpnInstallConnect` | Highest | Start OpenVPN, apply routes, disable IPv6, set DNS, purge IPv6 `::1`, refresh hosts |
 | `CodexCliVpnInstallDisconnect` | Highest | Kill OpenVPN, remove routes, restore DNS, clean hosts |
-| `CodexCliVpnInstallWatch` | Highest | Monitor tunnel health, auto-reconnect |
+| `CodexCliVpnInstallWatch` | Highest | Monitor tunnel health, auto-reconnect with full DNS fix |
 
 `vpn` / `voff` commands trigger these tasks, so no manual elevation is needed.
+
+Scheduled tasks call Python directly (`python.exe cli_vpn_install.py <action>`) instead of going through a PowerShell wrapper. This avoids Windows PowerShell 5.1 `Restricted` execution policy issues that silently killed the watcher in previous versions.
+
+### Reconnect Path Hardening
+
+OpenVPN has two reconnect paths, but only one applies DNS fix:
+
+- **Path A (Python watcher)**: detects dead OpenVPN process → full reconnect (routes + DNS + hosts) ✓
+- **Path B (OpenVPN internal)**: server pushes `ping-restart 50` → OpenVPN restarts tunnel without DNS fix ✗
+
+This skill blocks Path B entirely:
+
+1. `pull-filter ignore "ping-restart"` — server cannot trigger internal restart
+2. `pull-filter ignore "register-dns"` — server cannot re-register DNS on reconnect
+3. `ping-exit 30` — if no ping for 30s, OpenVPN **exits** (not restarts)
+4. Watcher (30s interval) detects the exit and runs Path A
+
+Result: every reconnect goes through the Python watcher, which always applies the full DNS fix.
+
+- `settings.json` → `windows.watch_interval_seconds: 30`
 
 ## Whitelist Domains (DNS Fix)
 
@@ -128,6 +151,8 @@ Domains resolved and written to hosts file on connect:
 - YouTube: `www.youtube.com`, `youtube.com`
 - GitHub: `github.com`, `api.github.com`, `raw.githubusercontent.com`, `gist.github.com`, `codeload.github.com`, `objects.githubusercontent.com`
 - OpenAI: `api.openai.com`, `chat.openai.com`, `platform.openai.com`
+- Telegram: `api.telegram.org`
+- Cloudflare Workers: `create-gemini-temp-images.hkseek-muigoelqy.workers.dev`
 
 ## Workflow
 

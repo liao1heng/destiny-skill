@@ -171,6 +171,25 @@ def log_watch(message: str) -> None:
         handle.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {message}\n")
 
 
+def _decode_subprocess_output(data) -> str:
+    """Decode subprocess output bytes to str, handling mixed encodings on Windows.
+
+    On Windows, command output may be UTF-8 (PowerShell with UTF-8 output) or
+    GBK/cp936 (legacy console commands like schtasks, ipconfig). We try UTF-8
+    first, then fall back to the system locale encoding.
+    """
+    if data is None:
+        return ""
+    if isinstance(data, str):
+        return data
+    for encoding in ("utf-8", "gbk", "cp936", "latin-1"):
+        try:
+            return data.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return data.decode("utf-8", errors="replace")
+
+
 def run_command(
     command: list[str],
     *,
@@ -178,7 +197,28 @@ def run_command(
     capture_output: bool = True,
     check: bool = False,
     env: dict[str, str] | None = None,
+    timeout: float | None = None,
 ) -> subprocess.CompletedProcess[str]:
+    if is_windows():
+        # On Windows, avoid text=True because the system locale (GBK on Chinese
+        # Windows) may not match the actual output encoding of commands like
+        # PowerShell (UTF-8). Capture raw bytes and decode defensively.
+        result = subprocess.run(
+            command,
+            input=input_text.encode("utf-8") if input_text else None,
+            capture_output=capture_output,
+            check=False,
+            env=env,
+            timeout=timeout,
+        )
+        stdout = _decode_subprocess_output(result.stdout)
+        stderr = _decode_subprocess_output(result.stderr)
+        return subprocess.CompletedProcess(
+            args=result.args,
+            returncode=result.returncode,
+            stdout=stdout,
+            stderr=stderr,
+        )
     result = subprocess.run(
         command,
         input=input_text,
@@ -186,6 +226,7 @@ def run_command(
         capture_output=capture_output,
         check=False,
         env=env,
+        timeout=timeout,
     )
     if check and result.returncode != 0:
         stderr = result.stderr.strip() or result.stdout.strip()
@@ -301,48 +342,58 @@ def write_windows_support_scripts() -> None:
     register_script = runtime_root() / WINDOWS_REGISTER_SCRIPT
     unregister_script = runtime_root() / WINDOWS_UNREGISTER_SCRIPT
 
+    # Embed the Python executable path used during install so the scheduled
+    # task does not rely on PATH lookup (which may fail in the task's context
+    # when Python is installed in a non-standard location like a managed
+    # runtime directory).
+    python_exe = sys.executable.replace("\\", "\\\\")
+
     task_script.write_text(
-        """param([Parameter(Mandatory = $true)][string]$Action)
+        f"""param([Parameter(Mandatory = $true)][string]$Action)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$pythonCommand = $null
-foreach ($candidate in @('py', 'python', 'python3')) {
-    $command = Get-Command $candidate -ErrorAction SilentlyContinue
-    if ($command) {
-        $pythonCommand = $candidate
-        break
-    }
-}
+# Preferred Python path (embedded during install)
+$preferredPython = '{python_exe}'
 
-if (-not $pythonCommand) {
+$pythonCommand = $null
+if (Test-Path $preferredPython) {{
+    $pythonCommand = $preferredPython
+}}
+if (-not $pythonCommand) {{
+    foreach ($candidate in @('py', 'python', 'python3')) {{
+        $command = Get-Command $candidate -ErrorAction SilentlyContinue
+        if ($command) {{
+            $pythonCommand = $command.Source
+            break
+        }}
+    }}
+}}
+
+if (-not $pythonCommand) {{
     throw 'Python 3 is required for cli-vpn-install.'
-}
+}}
 
 $scriptPath = Join-Path $PSScriptRoot 'cli_vpn_install.py'
-if ($pythonCommand -eq 'py') {
-    & py -3 $scriptPath $Action
-}
-else {
-    & $pythonCommand $scriptPath $Action
-}
+& $pythonCommand $scriptPath $Action
 exit $LASTEXITCODE
 """,
         encoding="utf-8",
     )
 
     register_script.write_text(
-        """Set-StrictMode -Version Latest
+        f"""Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $taskRoot = $PSScriptRoot
-$taskScript = Join-Path $taskRoot 'vpn_task.ps1'
+$pyScript = Join-Path $taskRoot 'cli_vpn_install.py'
+$pythonExe = '{python_exe}'
 $taskPrefix = 'CodexCliVpnInstall'
 
-function New-TaskAction([string]$ActionName) {
-    $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$taskScript`" -Action $ActionName"
-    New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument $arguments
-}
+function New-TaskAction([string]$ActionName) {{
+    $arguments = "`"$pyScript`" $ActionName"
+    New-ScheduledTaskAction -Execute $pythonExe -Argument $arguments
+}}
 
 $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 12)
@@ -676,6 +727,29 @@ def rewrite_auth_user_pass(ovpn_text: str, auth_path: Path) -> str:
             updated.append("route-nopull")
         if not any("pull-filter ignore" in l and "redirect-gateway" in l for l in updated):
             updated.append("pull-filter ignore \"redirect-gateway\"")
+        # Filter dhcp-option to prevent server-pushed DNS (e.g. 127.0.0.1) from
+        # overriding our Set-DnsClientServerAddress. Without this, OpenVPN's
+        # interactive service applies the pushed DNS, making dns.getServers()
+        # return ['127.0.0.1'] which breaks Node.js undici fetch() (uses
+        # dns.resolve* which queries getServers() directly, bypassing hosts).
+        if not any("pull-filter ignore" in l and "dhcp-option" in l for l in updated):
+            updated.append("pull-filter ignore \"dhcp-option\"")
+        # Filter ping-restart so OpenVPN doesn't internally restart (which
+        # bypasses our DNS fix — the restart gets a new tunnel IP but routes
+        # and hosts file still point to the old one). Instead we use ping-exit
+        # (below) so OpenVPN EXITS, and the watcher does a full reconnect.
+        if not any("pull-filter ignore" in l and "ping-restart" in l for l in updated):
+            updated.append("pull-filter ignore \"ping-restart\"")
+        # Filter register-dns to prevent OpenVPN interactive service from
+        # re-registering DNS settings on reconnect.
+        if not any("pull-filter ignore" in l and "register-dns" in l for l in updated):
+            updated.append("pull-filter ignore \"register-dns\"")
+    # Use ping-exit instead of the server's ping-restart: when the connection
+    # drops, OpenVPN exits (instead of internally restarting). The watcher
+    # detects the dead process and does a full reconnect with DNS fix.
+    if win_settings.get("route_nopull", False):
+        if not any(l.strip().startswith("ping-exit") for l in updated):
+            updated.append("ping-exit 30")
     if win_settings.get("disable_ipv6", False):
         if not any("pull-filter ignore" in l and "route-ipv6" in l for l in updated):
             updated.append("pull-filter ignore \"route-ipv6\"")
@@ -800,6 +874,15 @@ def current_openvpn_pid() -> int | None:
 def process_exists(pid: int) -> bool:
     if pid <= 0:
         return False
+    if is_windows():
+        # On Windows, os.kill(pid, 0) calls TerminateProcess which either
+        # kills the process or raises OSError(Access Denied) for elevated
+        # processes. Use tasklist instead for a safe existence check.
+        result = run_command(
+            ["tasklist", "/fi", f"pid eq {pid}", "/fo", "csv", "/nh"],
+            capture_output=True,
+        )
+        return str(pid) in (result.stdout or "")
     try:
         os.kill(pid, 0)
         return True
@@ -1180,6 +1263,13 @@ $items | Select-Object -First 1 | ConvertTo-Json -Depth 3
     return payload if isinstance(payload, dict) else None
 
 
+def windows_kill_openvpn() -> None:
+    """Kill any existing OpenVPN process to release the DCO adapter."""
+    run_command(["taskkill", "/IM", "openvpn.exe", "/F"], capture_output=True, check=False)
+    # Brief pause to let the OS release the DCO adapter
+    time.sleep(1)
+
+
 def start_openvpn_windows() -> int:
     openvpn_binary = ensure_openvpn_binary()
     creation_flags = 0
@@ -1299,8 +1389,14 @@ def remove_google_ipv6_firewall_rules() -> None:
 
 
 def windows_watch_task_running() -> bool:
-    result = run_command(["schtasks", "/Query", "/TN", windows_task_name("Watch"), "/FO", "LIST", "/V"], capture_output=True)
-    return result.returncode == 0 and "Status: Running" in result.stdout
+    # Use PowerShell Get-ScheduledTask instead of schtasks, because schtasks
+    # /FO LIST /V outputs localized text (e.g. "状态: 正在运行" on Chinese
+    # Windows) making the English string check unreliable.
+    result = powershell(
+        f"(Get-ScheduledTask -TaskName '{windows_task_name('Watch')}' -ErrorAction SilentlyContinue).State",
+        check=False,
+    )
+    return result.returncode == 0 and result.stdout.strip().lower() == "running"
 
 
 # --- DNS anti-poisoning via hosts file ---
@@ -1326,18 +1422,19 @@ DNS_FIX_DOMAINS = [
     "gist.github.com",
     "codeload.github.com",
     "objects.githubusercontent.com",
+    "api.telegram.org",
     "api.openai.com",
     "chat.openai.com",
     "platform.openai.com",
+    "create-gemini-temp-images.hkseek-muigoelqy.workers.dev",
 ]
 
 
 def resolve_via_vpn_dns(domain: str) -> list[str]:
     try:
-        result = subprocess.run(
+        result = run_command(
             ["nslookup", domain, "8.8.8.8"],
             capture_output=True,
-            text=True,
             timeout=10,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -1403,6 +1500,41 @@ def set_windows_primary_dns() -> None:
          "Set-DnsClientServerAddress -InterfaceIndex $idx -ServerAddresses @('8.8.8.8','1.1.1.1')"],
         capture_output=True, check=False,
     )
+    # Clear IPv6 DNS (e.g. ::1) on ALL interfaces to prevent GFW DNS poisoning
+    # via getaddrinfo fallback. ::1 has no resolver listening, so the system
+    # falls back to IPv4 8.8.8.8 whose UDP-53 packets get poisoned by the GFW.
+    # NOTE: Set-DnsClientServerAddress in PS 5.1 lacks -AddressFamily, so use
+    # netsh interface ipv6 delete dns <idx> all to clear IPv6 DNS only.
+    # ALSO clear ::1 directly from the registry (Tcpip6 Parameters Interfaces),
+    # because netsh alone does not remove the NameServer registry value —
+    # GetNetworkParams still reads ::1 from registry, causing dns.getServers()
+    # to return ['127.0.0.1'] which breaks dns.resolve*() in Node.js.
+    result = run_command(
+        ["powershell", "-Command",
+         "Get-DnsClientServerAddress -AddressFamily IPv6 -ErrorAction SilentlyContinue | "
+         "Where-Object { $_.ServerAddresses -contains '::1' } | "
+         "Select-Object -ExpandProperty InterfaceIndex"],
+        capture_output=True, check=False,
+    )
+    for line in (result.stdout or "").splitlines():
+        idx = line.strip()
+        if idx.isdigit():
+            run_command(
+                ["netsh", "interface", "ipv6", "delete", "dns", idx, "all"],
+                capture_output=True, check=False,
+            )
+    # Directly clear ::1 from IPv6 registry entries (netsh is not thorough enough)
+    run_command(
+        ["powershell", "-Command",
+         "Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters\\Interfaces' | "
+         "ForEach-Object { "
+         "  $ns = (Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue).NameServer; "
+         "  if ($ns -and $ns -match '::1') { "
+         "    Set-ItemProperty -Path $_.PSPath -Name 'NameServer' -Value '' -Type String -Force; "
+         "  } "
+         "}"],
+        capture_output=True, check=False,
+    )
     run_command(["ipconfig", "/flushdns"], capture_output=True, check=False)
 
 
@@ -1456,6 +1588,10 @@ def windows_connect_elevated(*, quiet: bool = False, start_watcher: bool = True)
             print(f"VPN already connected on {existing['InterfaceAlias']} ({existing['IPAddress']}). Routes refreshed.")
         return
 
+    # Kill any stale OpenVPN process before starting a fresh one.
+    # Without this, the old process may still hold the DCO adapter,
+    # causing the new process to fail or the tunnel to drop repeatedly.
+    windows_kill_openvpn()
     state["openvpn_pid"] = start_openvpn_windows()
     tunnel = wait_for_windows_tunnel(settings().get("connect_timeout_seconds", 20))
     state["connected"] = True
@@ -1696,8 +1832,13 @@ def watch_loop_command() -> None:
             elif is_windows():
                 tunnel = windows_find_tunnel()
                 if not current_openvpn_pid() or not tunnel:
-                    log_watch("tunnel dropped, reconnecting")
-                    windows_connect_elevated(quiet=True, start_watcher=False)
+                    # Double-check after a brief pause to avoid false positives
+                    # caused by transient PowerShell latency or adapter flicker.
+                    time.sleep(3)
+                    tunnel = windows_find_tunnel()
+                    if not current_openvpn_pid() or not tunnel:
+                        log_watch("tunnel dropped, reconnecting")
+                        windows_connect_elevated(quiet=True, start_watcher=False)
         except Exception as exc:
             log_watch(f"watcher error: {exc}")
     log_watch("watcher stopped")
