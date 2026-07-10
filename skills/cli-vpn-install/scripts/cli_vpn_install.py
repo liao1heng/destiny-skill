@@ -879,14 +879,29 @@ def current_openvpn_pid() -> int | None:
     if pid_file.exists():
         try:
             pid = int(pid_file.read_text(encoding="utf-8").strip())
-        except ValueError:
-            return None
-        if process_exists(pid):
+        except (ValueError, OSError):
+            pid = None
+        if pid and process_exists(pid):
             return pid
     state = load_state()
     pid = state.get("openvpn_pid")
     if isinstance(pid, int) and process_exists(pid):
         return pid
+    # Fallback: detect running OpenVPN process via pgrep.
+    # The --writepid file can go missing after a watcher-initiated restart
+    # if OpenVPN hasn't written it yet or it was cleaned up. Without this
+    # fallback the watcher enters a destructive loop: it kills the running
+    # OpenVPN (because PID is "unknown") and restarts it every cycle,
+    # preventing the tunnel from ever stabilising.
+    if not is_windows():
+        result = run_command(["pgrep", "-x", "openvpn"], capture_output=True)
+        if result.returncode == 0:
+            output = (result.stdout or "").strip()
+            if output:
+                try:
+                    return int(output.split("\n")[0])
+                except ValueError:
+                    pass
     return None
 
 
@@ -1857,8 +1872,15 @@ def watch_loop_command() -> None:
         try:
             if is_macos():
                 tunnel = choose_tunnel_interface(load_state().get("tunnel_interface"))
-                if not current_openvpn_pid() or not tunnel:
+                if not tunnel:
                     log_watch("tunnel dropped, reconnecting")
+                    connect_macos(quiet=True, start_watcher=False)
+                elif not current_openvpn_pid():
+                    # Tunnel interface exists but PID is unknown (writepid file
+                    # missing). Don't kill/restart — refresh routes instead.
+                    # connect_macos will detect the running process via pgrep
+                    # and take the "already connected" path.
+                    log_watch("tunnel up but PID missing, refreshing routes")
                     connect_macos(quiet=True, start_watcher=False)
             elif is_windows():
                 tunnel = windows_find_tunnel()
