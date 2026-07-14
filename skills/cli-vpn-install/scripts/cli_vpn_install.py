@@ -753,22 +753,34 @@ def rewrite_auth_user_pass(ovpn_text: str, auth_path: Path) -> str:
         # dns.resolve* which queries getServers() directly, bypassing hosts).
         if not any("pull-filter ignore" in l and "dhcp-option" in l for l in updated):
             updated.append("pull-filter ignore \"dhcp-option\"")
-        # Filter ping-restart so OpenVPN doesn't internally restart (which
-        # bypasses our DNS fix — the restart gets a new tunnel IP but routes
-        # and hosts file still point to the old one). Instead we use ping-exit
-        # (below) so OpenVPN EXITS, and the watcher does a full reconnect.
-        if not any("pull-filter ignore" in l and "ping-restart" in l for l in updated):
-            updated.append("pull-filter ignore \"ping-restart\"")
         # Filter register-dns to prevent OpenVPN interactive service from
         # re-registering DNS settings on reconnect.
         if not any("pull-filter ignore" in l and "register-dns" in l for l in updated):
             updated.append("pull-filter ignore \"register-dns\"")
-    # Use ping-exit instead of the server's ping-restart: when the connection
-    # drops, OpenVPN exits (instead of internally restarting). The watcher
-    # detects the dead process and does a full reconnect with DNS fix.
-    if win_settings.get("route_nopull", False):
-        if not any(l.strip().startswith("ping-exit") for l in updated):
-            updated.append("ping-exit 30")
+        # --- Platform-specific keepalive strategy ---
+        if is_windows():
+            # On Windows: filter ping-restart and use ping-exit so OpenVPN
+            # EXITS on connection drop. The watcher does a full reconnect
+            # with DNS fix (restart gets new tunnel IP but routes/hosts
+            # still point to old one on Windows).
+            if not any("pull-filter ignore" in l and "ping-restart" in l for l in updated):
+                updated.append("pull-filter ignore \"ping-restart\"")
+            if not any(l.strip().startswith("ping-exit") for l in updated):
+                updated.append("ping-exit 30")
+        else:
+            # On macOS: use ping-restart so OpenVPN restarts in-place on
+            # connection drop. This is faster (no watcher intervention needed,
+            # no sudo password required) and keeps the tunnel interface alive
+            # with persist-tun. The watcher is a safety net, not the primary
+            # recovery mechanism.
+            if not any(l.strip().startswith("ping ") for l in updated):
+                updated.append("ping 10")
+            if not any(l.strip().startswith("ping-restart") for l in updated):
+                updated.append("ping-restart 60")
+            if not any(l.strip() == "persist-tun" for l in updated):
+                updated.append("persist-tun")
+            if not any(l.strip() == "persist-key" for l in updated):
+                updated.append("persist-key")
     if win_settings.get("disable_ipv6", False):
         if not any("pull-filter ignore" in l and "route-ipv6" in l for l in updated):
             updated.append("pull-filter ignore \"route-ipv6\"")
