@@ -804,6 +804,16 @@ def rewrite_auth_user_pass(ovpn_text: str, auth_path: Path) -> str:
                 updated.append("persist-tun")
             if not any(l.strip() == "persist-key" for l in updated):
                 updated.append("persist-key")
+            # route-up hook: after TUN reopen (caused by ping-restart when
+            # server assigns a different VPN IP), all whitelist routes are
+            # lost. This hook re-adds them automatically without waiting
+            # for the keepalive script's 60s interval.
+            route_up_path = Path.home() / ".openvpn" / "route-up.sh"
+            if route_up_path.exists():
+                if not any(l.strip().startswith("script-security") for l in updated):
+                    updated.append("script-security 2")
+                if not any(l.strip().startswith("route-up") for l in updated):
+                    updated.append(f"route-up {route_up_path.as_posix()}")
     if win_settings.get("disable_ipv6", False):
         if not any("pull-filter ignore" in l and "route-ipv6" in l for l in updated):
             updated.append("pull-filter ignore \"route-ipv6\"")
