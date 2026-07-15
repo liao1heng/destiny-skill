@@ -757,26 +757,49 @@ def rewrite_auth_user_pass(ovpn_text: str, auth_path: Path) -> str:
         # re-registering DNS settings on reconnect.
         if not any("pull-filter ignore" in l and "register-dns" in l for l in updated):
             updated.append("pull-filter ignore \"register-dns\"")
+        # --- Filter server-pushed options that cause parse errors or
+        # conflict with our local config on ALL platforms ---
+        # Without these filters, OpenVPN logs "Options error" for each
+        # unsupported directive (dhcp-pre-release, block-ipv6, etc.),
+        # then decides "Pulled options changed on restart" → closes/reopens
+        # TUN device → all streaming connections drop.
+        extra_filters = [
+            "block-ipv6",
+            "route-metric",
+            "route-gateway",
+            "route-delay",
+            "topology",
+            "dhcp-pre-release",
+            "dhcp-renew",
+            "dhcp-release",
+            "explicit-exit-notify",
+        ]
+        for opt in extra_filters:
+            if not any("pull-filter ignore" in l and f'"{opt}"' in l for l in updated):
+                updated.append(f'pull-filter ignore "{opt}"')
+        # Filter server's ping/ping-restart so client's own (more relaxed)
+        # settings are used. Server typically pushes ping 12 / ping-restart 50
+        # which is too aggressive — brief Wi-Fi hiccup = tunnel restart.
+        for opt in ("ping", "ping-restart"):
+            if not any("pull-filter ignore" in l and f'"{opt}"' in l for l in updated):
+                updated.append(f'pull-filter ignore "{opt}"')
+
         # --- Platform-specific keepalive strategy ---
         if is_windows():
-            # On Windows: filter ping-restart and use ping-exit so OpenVPN
-            # EXITS on connection drop. The watcher does a full reconnect
-            # with DNS fix (restart gets new tunnel IP but routes/hosts
-            # still point to old one on Windows).
-            if not any("pull-filter ignore" in l and "ping-restart" in l for l in updated):
-                updated.append("pull-filter ignore \"ping-restart\"")
+            # On Windows: use ping-exit so OpenVPN EXITS on connection drop.
+            # The watcher does a full reconnect with DNS fix (restart gets
+            # new tunnel IP but routes/hosts still point to old one on Windows).
             if not any(l.strip().startswith("ping-exit") for l in updated):
                 updated.append("ping-exit 30")
         else:
             # On macOS: use ping-restart so OpenVPN restarts in-place on
-            # connection drop. This is faster (no watcher intervention needed,
-            # no sudo password required) and keeps the tunnel interface alive
-            # with persist-tun. The watcher is a safety net, not the primary
-            # recovery mechanism.
+            # connection drop. With persist-tun, the tunnel interface stays
+            # alive and routes are preserved. 120s is tolerant of brief
+            # network hiccups without dropping streaming connections.
             if not any(l.strip().startswith("ping ") for l in updated):
                 updated.append("ping 10")
             if not any(l.strip().startswith("ping-restart") for l in updated):
-                updated.append("ping-restart 60")
+                updated.append("ping-restart 120")
             if not any(l.strip() == "persist-tun" for l in updated):
                 updated.append("persist-tun")
             if not any(l.strip() == "persist-key" for l in updated):
