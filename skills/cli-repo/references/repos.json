@@ -1,0 +1,6 @@
+{
+  "repositories": [
+    {"url": "https://github.com/liao1heng/vpn.git", "path": "vpn"},
+    {"url": "https://github.com/liao1heng/vpn-releases.git", "path": "vpn/release"}
+  ]
+}

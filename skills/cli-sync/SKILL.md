@@ -27,6 +27,7 @@ description: 用于把本机 Codex 自定义 skill 与固定 GitHub 仓库 desti
 - `cli-mimo`
 - `cli-init`
 - `cli-pm`
+- `cli-repo`
 - `cli-sync`
 - `cli-test`
 - `cli-vpn-install`

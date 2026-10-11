@@ -1,0 +1,4 @@
+interface:
+  display_name: "CLI Repo"
+  short_description: "登记 GitHub 项目，在 Mac/Windows 固定目录补齐缺失仓库"
+  default_prompt: "使用 $cli-repo 在这台电脑补齐已登记的项目仓库。"

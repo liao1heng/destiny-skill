@@ -20,6 +20,7 @@ DEFAULT_MANAGED_SKILLS = [
     "cli-mimo",
     "cli-init",
     "cli-pm",
+    "cli-repo",
     "cli-sync",
     "cli-test",
     "cli-vpn-install",

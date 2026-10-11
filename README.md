@@ -66,3 +66,7 @@ bash skills/cli-sync/scripts/entry.sh --mode push --message "Sync local Codex sk
 
 To sync onto another machine, clone this repository and run `cli-sync` directly.
 It will discover paths automatically and create a managed checkout when needed.
+
+## Project checkouts
+
+`cli-repo` registers GitHub project URLs in its public JSON catalog. On macOS it clones missing projects to `~/Documents/workspace`; on Windows to `D:\Workspace`. Existing projects are never pulled, committed or pushed. Registry updates use a clean temporary checkout and preserve other local skill changes.
