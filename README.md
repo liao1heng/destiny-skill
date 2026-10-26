@@ -13,6 +13,7 @@ skills/
   cli-des/
   cli-dev/
   cli-init/
+  cli-jira/
   cli-pm/
   cli-sync/
   cli-test/

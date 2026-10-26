@@ -19,6 +19,7 @@ DEFAULT_MANAGED_SKILLS = [
     "cli-dev",
     "cli-mimo",
     "cli-init",
+    "cli-jira",
     "cli-pm",
     "cli-repo",
     "cli-sync",
@@ -342,6 +343,12 @@ def build_config() -> dict[str, object]:
     remote_url = os.environ.get("CLI_SYNC_REMOTE_URL", DEFAULT_REMOTE_URL)
     branch = os.environ.get("CLI_SYNC_BRANCH", DEFAULT_BRANCH)
     skills_path = local_skills_path()
+    selected = os.environ.get("CLI_SYNC_SKILLS")
+    managed_skills = list(DEFAULT_MANAGED_SKILLS)
+    if selected:
+        managed_skills = list(dict.fromkeys(name.strip() for name in selected.split(",") if name.strip()))
+        if not managed_skills or any(name not in DEFAULT_MANAGED_SKILLS for name in managed_skills):
+            raise RuntimeError("CLI_SYNC_SKILLS must contain supported managed skill names separated by commas.")
     repo_path = discover_repo_path(remote_url, username, token)
     return {
         "github_username": username,
@@ -350,7 +357,7 @@ def build_config() -> dict[str, object]:
         "branch": branch,
         "local_skills_path": skills_path.resolve(),
         "repo_path": repo_path.resolve(),
-        "managed_skills": list(DEFAULT_MANAGED_SKILLS),
+        "managed_skills": managed_skills,
         "auth_source": "available" if token else "git-or-anonymous",
     }
 

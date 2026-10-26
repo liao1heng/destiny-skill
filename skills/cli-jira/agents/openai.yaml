@@ -1,0 +1,4 @@
+interface:
+  display_name: "CLI Jira"
+  short_description: "通过直接HTTP请求查询Jira、发送备注和更新问题状态"
+  default_prompt: "使用 $cli-jira 通过 HTTP 请求处理 Jira 问题。"

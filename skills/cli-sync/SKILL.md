@@ -26,6 +26,7 @@ description: 用于把本机 Codex 自定义 skill 与固定 GitHub 仓库 desti
 - `cli-dev`
 - `cli-mimo`
 - `cli-init`
+- `cli-jira`
 - `cli-pm`
 - `cli-repo`
 - `cli-sync`
@@ -58,5 +59,6 @@ bash skills/cli-sync/scripts/entry.sh --mode push --message "Sync local Codex sk
 ## 注意
 
 - 支持 Windows 和 macOS；核心逻辑使用 Python，找不到可用 Python 时回退到 `uv run`。
+- 只同步指定技能时，设置 `CLI_SYNC_SKILLS=cli-jira,cli-sync`（逗号分隔受管名称）；未设置时同步全部受管技能。仓库有其他未提交修改时，使用干净的临时 checkout，并通过 `CLI_SYNC_REPO_PATH` 指定它，避免 `git add -A` 夹带其他任务。
 - 不需要再创建 `auth.ps1` 或机器路径配置。
 - GitHub HTTPS 认证使用 token，不使用 GitHub 账户密码。
